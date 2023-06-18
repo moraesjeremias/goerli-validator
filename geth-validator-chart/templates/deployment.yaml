@@ -1,0 +1,140 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+{{ include "labels.commons" . | indent 4 }}
+  namespace: {{ .Values.namespace }}
+spec:
+  progressDeadlineSeconds: 1200
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+{{ include "labels.commons" . | indent 8 }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      initContainers:
+      - name: generate-goerli-jwtsecret
+        image: "alpine"
+        imagePullPolicy: IfNotPresent
+        command:
+          - /bin/sh
+          - -c
+          - |
+            apk add openssl -q && openssl rand -hex 32 | tr -d "\n" > "/nimbus-data/jwtsecret"
+        volumeMounts:
+          - name: nimbus
+            mountPath: /nimbus-data   
+      - name: generate-node-keys
+        command:
+          - /bin/sh
+          - -c
+          - |
+            GETH_DIR=/root/.ethereum/goerli/geth;
+            mkdir -p ${GETH_DIR} && bootnode -genkey ${GETH_DIR}/nodekey && bootnode -nodekey ${GETH_DIR}/nodekey -writeaddress > ${GETH_DIR}/pubkey
+        image: "{{ .Values.deployment.container.generate_node_keys.image.repository }}:{{ .Values.deployment.container.generate_node_keys.image.tag }}"
+        imagePullPolicy: {{ .Values.deployment.container.generate_node_keys.image.pullPolicy | quote }}
+        volumeMounts:
+        - name: data
+          mountPath: /root
+      containers:
+      - name: nimbus
+        image: "{{ .Values.deployment.container.nimbus.image.repository }}:{{ .Values.deployment.container.nimbus.image.tag }}"
+        imagePullPolicy: {{ .Values.deployment.container.nimbus.image.pullPolicy | quote }}
+        command:
+          - sh
+          - -ac
+          - >
+            exec /home/user/nimbus-eth2/build/nimbus_beacon_node
+            --data-dir=/nimbus-data
+            --enr-auto-update=false
+            --udp-port={{ .Values.service.nimbus.ports.p2pPort }}
+            --tcp-port={{ .Values.service.nimbus.ports.p2pPort }}
+            --rest=true
+            --rest-address=0.0.0.0
+            --rest-port={{ .Values.service.nimbus.ports.restPort }}
+            --network=goerli
+            --el=http://localhost:{{ .Values.service.authRpcPort }}
+            --jwt-secret="/nimbus-data/jwtsecret"
+        volumeMounts:
+          - name: nimbus
+            mountPath: /nimbus-data
+        ports:
+          - name: p2p-tcp
+            containerPort: {{ .Values.service.nimbus.ports.p2pPort }}
+            protocol: TCP
+          - name: p2p-udp
+            containerPort: {{ .Values.service.nimbus.ports.p2pPort }}
+            protocol: UDP
+          - name: http-rest
+            containerPort: {{ .Values.service.nimbus.ports.restPort }}
+            protocol: TCP
+        resources:
+{{ toYaml .Values.deployment.container.nimbus.resources | indent 10 }}
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0       
+        env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+      - name: geth
+        image: "{{ .Values.deployment.container.geth.image.repository }}:{{ .Values.deployment.container.geth.image.tag }}"
+        imagePullPolicy: {{ .Values.deployment.container.geth.image.pullPolicy | quote }}
+        command:
+          - geth
+          - --config=/root/geth-config/config.toml
+          - --cache={{ include "geth-public.goerli.cache" . }}
+          - --goerli
+          - --authrpc.port={{ .Values.service.authRpcPort }}
+          - --authrpc.jwtsecret=/nimbus-data/jwtsecret
+          - --authrpc.vhosts=*
+          - --networkid=5
+          - --port={{ .Values.service.geth.ports.networkPort }}
+          - --http
+          - --http.addr=0.0.0.0
+          - --http.port={{ .Values.service.geth.ports.rpcPort }}
+          - --ws
+          - --ws.addr=0.0.0.0
+          - --ws.port={{ .Values.service.geth.ports.wsPort }}
+          {{- if .Values.deployment.container.geth.bootNodes }}
+          - --bootnodes={{ .Values.deployment.container.geth.bootNodes }}
+          {{- end }}
+        resources:
+{{ toYaml .Values.deployment.container.geth.resources | indent 10 }}
+        ports:
+        - name: network-udp
+          containerPort: {{ .Values.service.geth.ports.networkPort }}
+          protocol: UDP
+        - name: network-tcp
+          containerPort: {{ .Values.service.geth.ports.networkPort }}
+          protocol: TCP
+        - name: rpc
+          containerPort: {{ .Values.service.geth.ports.rpcPort }}
+        - name: ws
+          containerPort: {{ .Values.service.geth.ports.wsPort }}
+        volumeMounts:
+        - name: geth-config
+          mountPath: /root/geth-config
+        - name: data
+          mountPath: /root
+        - name: nimbus
+          mountPath: /nimbus-data
+      volumes:
+      - name: geth-config
+        configMap:
+          name: {{ .Release.Name }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-chaindata
+      - name: nimbus
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-nimbus

@@ -1,0 +1,2 @@
+1. Locally expose your goerli node by:
+kubectl port-forward deploy/{{ .Release.Name }} -n {{ .Values.namespace }} {{ .Values.service.geth.ports.rpcPort }}:{{ .Values.service.geth.ports.rpcPort }}

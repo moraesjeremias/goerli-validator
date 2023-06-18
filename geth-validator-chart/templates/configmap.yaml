@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+{{ include "labels.commons" . | indent 4 }}
+data:
+  config.toml: |-
+      [Eth]
+      TrieTimeout = {{ int .Values.configmap.trieTimeout }}
+
+      [Node.HTTPTimeouts]
+      ReadTimeout = {{ int .Values.configmap.rpcReadTimeout }}
+      WriteTimeout = {{ int .Values.configmap.rpcWriteTimeout }}
+      IdleTimeout = {{ int .Values.configmap.rpcIdleTimeout }}
+
