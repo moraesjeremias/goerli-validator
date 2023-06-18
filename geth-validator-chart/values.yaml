@@ -21,21 +21,18 @@ deployment:
           memory: 6Gi
     geth:
       commandExtraArgs:
-        - --rpc.evmtimeout=5
         - --goerli
-        - --authrpc.port={{ .Values.deployment.container.geth.authRpcPort }}
+        - --authrpc.port=8551
         - --authrpc.jwtsecret=/nimbus-data/jwtsecret
-        - --authrpc.vhosts=*
-        - --port={{ .Values.deployment.container.geth.networkPort }}
+        - --authrpc.vhosts='*'
+        - --port=30303
         - --syncmode=full
         - --maxpeers=100
-        - --http.vhosts={{ .Values.deployment.container.geth.rpcVhosts }}
         - --http.corsdomain='*'
-        - --http.api={{ .Values.deployment.container.geth.apiMngt }}
-        - --ws.api={{ .Values.deployment.container.geth.apiMngt }}
-        - --ws.origins={{ .Values.deployment.container.geth.wsOrigins }}
-        - --rpc.txfeecap=100
-        - --rpc.gascap=500000000
+        - --http.vhosts='*'
+        - --http.api=net,eth,web3
+        - --ws.api=net,eth,web3
+        - --ws.origins='*'
       image:
         repository: ethereum/client-go
         tag: v1.12.0
@@ -68,7 +65,7 @@ pvc:
     resource:
       request: 360Gi
 
-configmap:
+configmap: 
   trieTimeout: 3600000000000
   rpcReadTimeout: 30000000000
   rpcWriteTimeout: 30000000000

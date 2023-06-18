@@ -12,4 +12,3 @@ spec:
   resources:
     requests:
       storage: {{ .Values.pvc.geth.resource.request | quote }}
-

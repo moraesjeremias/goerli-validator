@@ -105,6 +105,9 @@ spec:
           - --ws
           - --ws.addr=0.0.0.0
           - --ws.port={{ .Values.service.geth.ports.wsPort }}
+          {{- range .Values.deployment.container.geth.commandExtraArgs }}
+          - {{ . }}
+          {{- end }}
           {{- if .Values.deployment.container.geth.bootNodes }}
           - --bootnodes={{ .Values.deployment.container.geth.bootNodes }}
           {{- end }}

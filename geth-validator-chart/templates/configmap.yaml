@@ -14,4 +14,3 @@ data:
       ReadTimeout = {{ int .Values.configmap.rpcReadTimeout }}
       WriteTimeout = {{ int .Values.configmap.rpcWriteTimeout }}
       IdleTimeout = {{ int .Values.configmap.rpcIdleTimeout }}
-
