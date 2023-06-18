@@ -1,0 +1,6 @@
+apiVersion: v2
+name: geth-validator
+description: A Helm chart for running geth validator
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
