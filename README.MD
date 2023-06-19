@@ -1,5 +1,5 @@
 # Ethereum Goerli Validator
-- This repo abstracts the heavy lift and shift work for setting up and run and Goerli Validator
+- This repo abstracts the heavy lift and shift work for setting up and run a Goerli Validator Node
 
 ## Pre-requisites
 - Access to Kubernetes cluster v1.23+
@@ -38,6 +38,20 @@
 
 > Note: you must wait until your goerli node gets fully synced
 
+
+## Setup Staking Launchpad Goerli
+Once you've installed the release, let it sync and funded your wallet address you may submit your node to the [Staking Launchpad (Goerli Testnet)](https://goerli.launchpad.ethereum.org/en/)
+
+1. Visit [Staking Launchpad (Goerli Testnet)](https://goerli.launchpad.ethereum.org/en/)
+2. Click on Become a Validator Button
+3. Read carefully the instructions and accept them. Check also the [validator checklist](https://goerli.launchpad.ethereum.org/en/checklist)
+4. Choose geth as execution client and hit continue
+5. Choose Nimbus as consensus client and hit continue
+6. Select number of validators (1), paste your Metamask wallet address on Withdrawal address field and hit continue
+7. Run `kubectl exec -ti deployment/goerli-validator -c nimbus -- /bin/sh`. Inside the `nimbus` container copy the deposit data values in `/nimbus-data/staking-deposit-cli/validator_keys/deposit_data.json` save it to a local `/tmp/nimbus/deposit_data.json` and upload it to [Staking Launchpad deposit data](https://goerli.launchpad.ethereum.org/en/upload-deposit-data) and hit continue.
+8. Connect your wallet with funded address accept the terms and make a transaction to transform the goerli node into actual a validator.
+9. Verify the submitted tfx on [Goerli etherscan](https://goerli.etherscan.io/tx/0x4b39784fe049aec0571c37862f7f214137b00a2c88f85ed9c59dd38d466f623c)
+10. Validate your Goerli node validator request status on [Goerli Beacon chain](https://goerli.beaconcha.in/validator/0x8e46b6de48aac0fac4000a57b7faad4bb0505be6501683590bbc2c45730281f844dceb61996065f01cd50e681c21a18e#charts)
 
 ## WIP
 - Automatic ledger snapshot download/recovery to speed up validation node bootstrap down to minutes/hour.
